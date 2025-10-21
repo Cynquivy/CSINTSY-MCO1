@@ -105,23 +105,30 @@ public class SokoBot {
     // Initial state: box positions and player position
     State initialState = new State(boxesStart, playerStartPos);
 
-    // BFS frontier (states reached by pushes)
-    Queue<State> frontier = new ArrayDeque<>();
-    frontier.add(initialState);
+    // A* Search frontier (priority queue for states)
+    PriorityQueue<StateWithCost> frontier = new PriorityQueue<>(Comparator.comparingInt(s -> s.cost + s.heuristic));
 
     // For reconstructing the full move sequence and for visited checks
+    Map<String, Integer> bestCost = new HashMap<>();
     Map<String, ParentInfo> cameFrom = new HashMap<>();
-    Set<String> visited = new HashSet<>();
-    visited.add(initialState.key());
+
+    // Initialize A* Search heuristic with initial state
+    int initialHeuristic = manhattanHeuristic(initialState, goalSet, cols);
+    frontier.add(new StateWithCost(initialState, 0, initialHeuristic));
+    bestCost.put(initialState.key(), 0);
 
     final int MAX_EXPANSIONS = 500_000; // modifiable, it's there to not crash my pc
     int expansions = 0;
 
-    // BFS main loop
-    while (!frontier.isEmpty()) {
-      State state = frontier.poll();
+    // A* Search main loop
+    while (!frontier.isEmpty() && expansions <= MAX_EXPANSIONS) {
+      StateWithCost current = frontier.poll();
+      State state = current.state;
+
+      // Check if there is already a better path previously
+      if (current.cost > bestCost.getOrDefault(state.key(), Integer.MAX_VALUE)) continue;
+
       expansions++;
-      if (expansions > MAX_EXPANSIONS) break;
 
       // Goal check: all boxes are on goals after ___ BFS expansions
       if (allBoxesOnGoals(state.boxPositions, goalSet)) {
@@ -192,18 +199,20 @@ public class SokoBot {
 
           State successor = new State(newBoxPositions, boxPos); // player ends up where the box was
           String succKey = successor.key();
-          if (visited.contains(succKey)) {
-            System.out.println("[SokoBotDebug] skip: already visited");
-            continue;
-          }
 
           // The action is: walkMoves (sequence) then a single push character
           String action = walkMoves + MOVE_CHARS[dir];
           System.out.println("[SokoBotDebug] accepting push: action=" + action);
 
-          cameFrom.put(succKey, new ParentInfo(state.key(), action));
-          visited.add(succKey);
-          frontier.add(successor);
+          // Track cost
+          int newCost = current.cost + 1;
+
+          if (newCost < bestCost.getOrDefault(succKey, Integer.MAX_VALUE)) {
+            bestCost.put(succKey, newCost);
+            int heuristic = manhattanHeuristic(successor, goalSet, cols);
+            frontier.add(new StateWithCost(successor, newCost, heuristic));
+            cameFrom.put(succKey, new ParentInfo(state.key(), action));
+          }
         }
       }
     }
@@ -243,6 +252,22 @@ public class SokoBot {
   }
 
   /**
+   * StateWithCost (constructor)
+   * Purpose: represent a Sokoban state with overall cost and heuristic cost of state.
+   */
+  private static class StateWithCost {
+    State state;
+    int cost;       // Cost so far
+    int heuristic;  // Estimated cost to goal
+
+    StateWithCost(State state, int cost, int heuristic) {
+      this.state = state;
+      this.cost = cost;
+      this.heuristic = heuristic;
+    }
+  }
+
+  /**
    * ParentInfo (constructor)
    * Purpose: store parent state key and the action (walks+push) used to reach child
    */
@@ -254,6 +279,27 @@ public class SokoBot {
       this.parentKey = parentKey;
       this.actionFromParent = action;
     }
+  }
+
+  /**
+   * manhattanHeuristic
+   * Purpose: Calculates the heuristic cost between the state of boxes and the goals
+   * Parameters: state (State), goals (Set<Integer>), cols (int)
+   * Return: int
+   */
+  private int manhattanHeuristic(State state, Set<Integer> goals, int cols) {
+    int total = 0;
+    for (int box : state.boxPositions) {
+      int minDist = Integer.MAX_VALUE;
+      for (int goal : goals) {
+        int boxRow = box / cols, boxCol = box % cols;
+        int goalRow = goal / cols, goalCol = goal % cols;
+        int dist = Math.abs(boxRow - goalRow) + Math.abs(boxCol - goalCol);
+        minDist = Math.min(minDist, dist);
+      }
+      total += minDist;
+    }
+    return total;
   }
 
   /**
