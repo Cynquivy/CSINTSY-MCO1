@@ -61,7 +61,6 @@ public class SokoBot {
       }
     }
 
-    // I honestly don't know what this does but gpt told me to put it
     final Set<Integer> goalSet = new HashSet<>(goalsList);
 
     // Precompute conservative static dead cells (corners only)
@@ -442,3 +441,4 @@ public class SokoBot {
     return sb.toString();
   }
 }
+
