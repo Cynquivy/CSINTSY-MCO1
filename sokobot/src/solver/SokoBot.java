@@ -16,7 +16,7 @@ public class SokoBot {
 
   /**
    * solveSokobanPuzzle
-   * Purpose: Solve the provided Sokoban level using BFS (minimize pushes).
+   * Purpose: Solve the provided Sokoban level using A* Search (find most promising pushes).
    * Parameters:
    *  - width: number of columns in the grid
    *  - height: number of rows in the grid
@@ -129,7 +129,7 @@ public class SokoBot {
 
       expansions++;
 
-      // Goal check: all boxes are on goals after ___ BFS expansions
+      // Goal check: all boxes are on goals after ___ A* Search expansions
       if (allBoxesOnGoals(state.boxPositions, goalSet)) {
         System.out.println("[SokoBotDebug] Found solution after expansions=" + expansions);
         return reconstructSolution(state.key(), cameFrom); // Solved answer
