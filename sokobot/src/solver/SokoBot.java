@@ -178,7 +178,6 @@ public class SokoBot {
           // Reconstruct the actual walking moves from player's pos to pushing pos
           String walkMoves = reconstructWalk(state.playerPos, playerPushPos, boxOccupied, mapData, rows, cols);
           if (walkMoves == null) {
-            // This shouldn't happen because we already checked reachability, but be defensive
             System.out.println("[SokoBotDebug] Warning: reconstructWalk failed despite reachability");
             continue;
           }
@@ -441,4 +440,5 @@ public class SokoBot {
     return sb.toString();
   }
 }
+
 
